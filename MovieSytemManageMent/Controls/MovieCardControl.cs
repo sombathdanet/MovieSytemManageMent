@@ -1,242 +1,184 @@
-﻿ // 👈 1. ADD THIS NAMESPACE
-using MovieSytemManageMent.ApplicationForm.Dialog;
+﻿using MovieSytemManageMent.ApplicationForm.Dialog;
 using MovieSytemManageMent.Model;
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Windows.Forms;
 
 namespace MovieSytemManageMent.Controls
 {
     public class MovieCardControl : UserControl
     {
-        // ── Events ───────────────────────────────────────────────────────
-        public event EventHandler<Movie> OnEdit;
-        public event EventHandler<Movie> OnDelete;
+        public event EventHandler<Movie> OnDetailsClick;
+        public event EventHandler<Movie> OnBookClick;
 
         public Movie Movie { get; private set; }
+        private bool _isHovered = false;
 
-        // ── Controls ─────────────────────────────────────────────────────
-        private PictureBox pbPoster;
-        private Label lblGenreBadge;
-        private Label lblTitle;
-        private Label lblRatingYear;
-        private Button btnEdit;
-        private Button btnDelete;
-
-        // ── Genre → accent color ─────────────────────────────────────────
-        private static Color GenreColor(string genre)
-        {
-            switch ((genre ?? "").ToLower())
-            {
-                case "action": return Color.FromArgb(220, 60, 60);
-                case "drama": return Color.FromArgb(41, 98, 196);
-                case "comedy": return Color.FromArgb(230, 160, 30);
-                case "sci-fi": return Color.FromArgb(30, 170, 200);
-                case "horror": return Color.FromArgb(100, 20, 140);
-                case "romance": return Color.FromArgb(220, 80, 120);
-                case "thriller": return Color.FromArgb(50, 60, 80);
-                case "animation": return Color.FromArgb(40, 180, 100);
-                default: return Color.FromArgb(80, 100, 140);
-            }
-        }
+        // Theme Colors
+        private readonly Color PrimaryNavy = Color.FromArgb(12, 26, 58);
+        private readonly Color SecondaryText = Color.FromArgb(100, 110, 130);
+        private readonly Color AccentRed = Color.FromArgb(226, 60, 60);
+        private readonly Color CardBg = Color.White;
+        private readonly Color ShadowColor = Color.FromArgb(30, 0, 0, 0);
 
         public MovieCardControl(Movie movie)
         {
-            Movie = movie;
-            BuildCard();
-
-            // 👈 2. REGISTER THE DETAIL CLICK HANDLER
-            SetupClickEvents();
+            Movie = movie ?? throw new ArgumentNullException(nameof(movie));
+            InitializeComponent();
         }
 
-        private void SetupClickEvents()
+        private void InitializeComponent()
         {
-            // Define the action
-            Action openDetails = () => {
-                using (var detailDialog = new MovieDetailDialog(Movie))
-                {
-                    detailDialog.ShowDialog();
-                }
-            };
+            this.Size = new Size(190, 310); // Slightly larger for better breathing room
+            this.Margin = new Padding(12);
+            this.BackColor = Color.Transparent;
+            this.DoubleBuffered = true;
 
-            // Apply to the card itself
-            this.Click += (s, e) => openDetails();
-
-            // Apply to info labels and poster (excluding buttons)
-            pbPoster.Click += (s, e) => openDetails();
-            lblTitle.Click += (s, e) => openDetails();
-            lblRatingYear.Click += (s, e) => openDetails();
-        }
-
-        private void BuildCard()
-        {
-            Color accent = GenreColor(Movie.Genre);
-
-            this.Size = new Size(170, 274);
-            this.Margin = new Padding(6, 6, 6, 6);
-            this.BackColor = Color.White;
-            this.Cursor = Cursors.Hand;
-
-            // Poster area
-            pbPoster = new PictureBox();
-            pbPoster.Size = new Size(170, 184);
-            pbPoster.Location = new Point(0, 0);
-            pbPoster.SizeMode = PictureBoxSizeMode.Normal;
-            pbPoster.Image = GeneratePoster(170, 184, accent, Movie.Title, Movie.Genre);
-
-            // Genre badge
-            lblGenreBadge = new Label();
-            lblGenreBadge.Text = Movie.Genre;
-            lblGenreBadge.Font = new Font("Segoe UI", 7F, FontStyle.Bold);
-            lblGenreBadge.ForeColor = Color.White;
-            lblGenreBadge.BackColor = accent;
-            lblGenreBadge.AutoSize = false;
-            lblGenreBadge.Size = new Size(62, 20);
-            lblGenreBadge.Location = new Point(102, 8);
-            lblGenreBadge.TextAlign = ContentAlignment.MiddleCenter;
-            pbPoster.Controls.Add(lblGenreBadge);
-
-            // Accent line
-            var accentLine = new Panel();
-            accentLine.BackColor = accent;
-            accentLine.Size = new Size(170, 3);
-            accentLine.Location = new Point(0, 184);
-
-            // Info panel
-            var pnlInfo = new Panel();
-            pnlInfo.Size = new Size(170, 87);
-            pnlInfo.Location = new Point(0, 187);
-            pnlInfo.BackColor = Color.White;
-
-            lblTitle = new Label();
-            lblTitle.Text = Movie.Title;
-            lblTitle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
-            lblTitle.ForeColor = Color.FromArgb(12, 26, 58);
-            lblTitle.AutoSize = false;
-            lblTitle.Size = new Size(152, 32);
-            lblTitle.Location = new Point(9, 6);
-            lblTitle.AutoEllipsis = true;
-
-            lblRatingYear = new Label();
-            lblRatingYear.Text = $"⭐ {Movie.Rating:0.0}   •   {Movie.Year}";
-            lblRatingYear.Font = new Font("Segoe UI", 7.5F);
-            lblRatingYear.ForeColor = Color.FromArgb(120, 130, 155);
-            lblRatingYear.AutoSize = false;
-            lblRatingYear.Size = new Size(152, 18);
-            lblRatingYear.Location = new Point(9, 40);
-
-            btnEdit = new Button();
-            btnEdit.Text = "✏ Edit";
-            btnEdit.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
-            btnEdit.ForeColor = Color.White;
-            btnEdit.BackColor = accent;
-            btnEdit.FlatStyle = FlatStyle.Flat;
-            btnEdit.FlatAppearance.BorderSize = 0;
-            btnEdit.Size = new Size(72, 24);
-            btnEdit.Location = new Point(9, 58);
-            btnEdit.Cursor = Cursors.Hand;
-            btnEdit.Click += (s, e) => OnEdit?.Invoke(this, Movie);
-
-            btnDelete = new Button();
-            btnDelete.Text = "🗑 Del";
-            btnDelete.Font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
-            btnDelete.ForeColor = Color.FromArgb(200, 50, 50);
-            btnDelete.BackColor = Color.FromArgb(255, 240, 240);
-            btnDelete.FlatStyle = FlatStyle.Flat;
-            btnDelete.FlatAppearance.BorderSize = 1;
-            btnDelete.FlatAppearance.BorderColor = Color.FromArgb(220, 180, 180);
-            btnDelete.Size = new Size(72, 24);
-            btnDelete.Location = new Point(89, 58);
-            btnDelete.Cursor = Cursors.Hand;
-            btnDelete.Click += (s, e) =>
-            {
-                if (MessageBox.Show($"Delete \"{Movie.Title}\"?", "Confirm Delete",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                    OnDelete?.Invoke(this, Movie);
-            };
-
-            pnlInfo.Controls.AddRange(new Control[] { lblTitle, lblRatingYear, btnEdit, btnDelete });
-
-            // 👈 3. ADD HOVER EFFECTS FOR BETTER UX
-            this.MouseEnter += (s, e) => {
-                this.BackColor = Color.FromArgb(243, 247, 255);
-                pnlInfo.BackColor = Color.FromArgb(243, 247, 255);
-            };
+            // Setup Hover detection for the whole control
+            this.MouseEnter += (s, e) => UpdateHover(true);
             this.MouseLeave += (s, e) => {
-                this.BackColor = Color.White;
-                pnlInfo.BackColor = Color.White;
+                if (!this.ClientRectangle.Contains(this.PointToClient(Control.MousePosition)))
+                    UpdateHover(false);
             };
 
-            this.Controls.Add(pbPoster);
-            this.Controls.Add(accentLine);
-            this.Controls.Add(pnlInfo);
+            BuildUI();
         }
 
-        private static Image GeneratePoster(int w, int h, Color accent, string title, string genre)
+        private void BuildUI()
+        {
+            // 1. Poster Container (Rounded)
+            var pbPoster = new PictureBox
+            {
+                Location = new Point(10, 10),
+                Size = new Size(170, 200),
+                SizeMode = PictureBoxSizeMode.CenterImage,
+                BackColor = Color.FromArgb(245, 246, 250),
+                Cursor = Cursors.Hand
+            };
+
+            // Load Poster
+            pbPoster.Image = LoadPosterImage(pbPoster.Width, pbPoster.Height);
+            pbPoster.Click += (s, e) => OnDetailsClick?.Invoke(this, Movie);
+
+            // 2. Title
+            var lblTitle = new Label
+            {
+                Text = Movie.Title,
+                Font = new Font("Segoe UI Semibold", 10.5F),
+                ForeColor = PrimaryNavy,
+                Location = new Point(10, 218),
+                Size = new Size(170, 22),
+                AutoEllipsis = true
+            };
+
+            // 3. Subtitle (Genre • Year)
+            var lblSub = new Label
+            {
+                Text = $"{Movie.Genre} • {Movie.Year}",
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = SecondaryText,
+                Location = new Point(10, 240),
+                Size = new Size(170, 18)
+            };
+
+            // 4. Action Buttons Container
+            var btnDetails = CreateButton("Details", false, new Point(10, 268));
+            var btnBook = CreateButton("Book Now", true, new Point(95, 268));
+
+            btnDetails.Click += (s, e) => OnDetailsClick?.Invoke(this, Movie);
+            btnBook.Click += (s, e) => OnBookClick?.Invoke(this, Movie);
+
+            this.Controls.AddRange(new Control[] { pbPoster, lblTitle, lblSub, btnDetails, btnBook });
+        }
+
+        private Button CreateButton(string text, bool isPrimary, Point location)
+        {
+            var btn = new Button
+            {
+                Text = text,
+                Location = location,
+                Size = new Size(82, 32),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, isPrimary ? FontStyle.Bold : FontStyle.Regular),
+                Cursor = Cursors.Hand,
+                BackColor = isPrimary ? AccentRed : Color.White,
+                ForeColor = isPrimary ? Color.White : PrimaryNavy
+            };
+            btn.FlatAppearance.BorderSize = isPrimary ? 0 : 1;
+            btn.FlatAppearance.BorderColor = isPrimary ? AccentRed : Color.FromArgb(220, 224, 230);
+            return btn;
+        }
+
+        private void UpdateHover(bool hovered)
+        {
+            _isHovered = hovered;
+            this.Invalidate(); // Redraw shadow and background
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Draw Card Background with Rounded Corners
+            var rect = new Rectangle(5, 5, this.Width - 11, this.Height - 11);
+            float radius = 12f;
+
+            using (GraphicsPath path = GetRoundedRect(rect, radius))
+            {
+                // Draw Shadow if hovered
+                if (_isHovered)
+                {
+                    using (var shadowBrush = new SolidBrush(ShadowColor))
+                        e.Graphics.FillPath(shadowBrush, GetRoundedRect(new Rectangle(7, 7, rect.Width, rect.Height), radius));
+                }
+
+                using (var brush = new SolidBrush(CardBg))
+                    e.Graphics.FillPath(brush, path);
+
+                // Draw Border
+                using (var pen = new Pen(_isHovered ? AccentRed : Color.FromArgb(235, 238, 242), 1.5f))
+                    e.Graphics.DrawPath(pen, path);
+            }
+        }
+
+        private GraphicsPath GetRoundedRect(Rectangle bounds, float radius)
+        {
+            var path = new GraphicsPath();
+            float d = radius * 2;
+            path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+            path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private Image LoadPosterImage(int w, int h)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(Movie.PosterUrl) && File.Exists(Movie.PosterUrl))
+                {
+                    using (var img = Image.FromFile(Movie.PosterUrl))
+                        return new Bitmap(img, new Size(w, h));
+                }
+            }
+            catch { }
+            return GenerateModernPlaceholder(w, h);
+        }
+
+        private Image GenerateModernPlaceholder(int w, int h)
         {
             var bmp = new Bitmap(w, h);
             using (var g = Graphics.FromImage(bmp))
             {
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-
-                var dark = Color.FromArgb(
-                    Math.Max(0, accent.R - 80),
-                    Math.Max(0, accent.G - 80),
-                    Math.Max(0, accent.B - 80));
-                using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                    new Rectangle(0, 0, w, h), dark, accent,
-                    System.Drawing.Drawing2D.LinearGradientMode.Vertical))
-                {
-                    g.FillRectangle(brush, 0, 0, w, h);
-                }
-
-                using (var overlay = new SolidBrush(Color.FromArgb(40, 0, 0, 0)))
-                    g.FillRectangle(overlay, 0, h / 2, w, h / 2);
-
-                string icon = GenreIcon(genre);
-                using (var iconFont = new Font("Segoe UI Emoji", 38F))
-                {
-                    var iconSize = g.MeasureString(icon, iconFont);
-                    float ix = (w - iconSize.Width) / 2f;
-                    float iy = (h / 2f) - iconSize.Height / 2f - 14;
-                    g.DrawString(icon, iconFont, Brushes.White, ix, iy);
-                }
-
-                using (var titleFont = new Font("Segoe UI", 8F, FontStyle.Bold))
-                {
-                    var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisWord };
-                    var titleRect = new RectangleF(6, h - 68, w - 12, 60);
-                    using (var shadow = new SolidBrush(Color.FromArgb(120, 0, 0, 0)))
-                        g.DrawString(title, titleFont, shadow, RectangleF.Inflate(titleRect, 1, 1), fmt);
-                    g.DrawString(title, titleFont, Brushes.White, titleRect, fmt);
-                }
+                g.Clear(Color.FromArgb(240, 242, 245));
+                using (var font = new Font("Segoe UI", 24F))
+                    g.DrawString("🎬", font, Brushes.Gray, (w / 2) - 20, (h / 2) - 25);
             }
             return bmp;
-        }
-
-        private static string GenreIcon(string genre)
-        {
-            switch ((genre ?? "").ToLower())
-            {
-                case "action": return "💥";
-                case "drama": return "🎭";
-                case "comedy": return "😂";
-                case "sci-fi": return "🚀";
-                case "horror": return "👻";
-                case "romance": return "💕";
-                case "thriller": return "🔪";
-                case "animation": return "✨";
-                default: return "🎬";
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && pbPoster?.Image != null)
-            {
-                var img = pbPoster.Image;
-                pbPoster.Image = null;
-                img.Dispose();
-            }
-            base.Dispose(disposing);
         }
     }
 }

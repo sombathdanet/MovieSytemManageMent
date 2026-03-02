@@ -253,8 +253,13 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
                 foreach (var movie in movies)
                 {
                     var card = new MovieCardControl(movie);
-                    card.OnEdit += Card_OnEdit;
-                    card.OnDelete += Card_OnDelete;
+
+                    // Details -> show movie details dialog
+                    card.OnDetailsClick += Card_OnDetailsClick;
+
+                    // Book -> show booking dialog (keeps your existing behavior)
+                    card.OnBookClick += Card_OnBookClick;
+
                     flpMovieCards.Controls.Add(card);
                 }
             }
@@ -265,16 +270,16 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
         // ════════════════════════════════════════════════════════════════
         //  CARD EVENTS
         // ════════════════════════════════════════════════════════════════
-        private void Card_OnEdit(object sender, Movie movie)
-        {
-            MessageBox.Show($"✏ Edit: {movie.Title}\n\nOpen your EditMovieForm here.",
-                "Edit Movie", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
+        //private void Card_OnEdit(object sender, Movie movie)
+        //{
+        //    MessageBox.Show($"✏ Edit: {movie.Title}\n\nOpen your EditMovieForm here.",
+        //        "Edit Movie", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        //}
 
-        private void Card_OnDelete(object sender, Movie movie)
-        {
-            _movieRepo.Delete(movie.Id);
-        }
+        //private void Card_OnDelete(object sender, Movie movie)
+        //{
+        //    _movieRepo.Delete(movie.Id);
+        //}
 
         // ════════════════════════════════════════════════════════════════
         //  SEARCH
@@ -358,6 +363,35 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
         {
             MovieDataStore.Instance.MoviesChanged -= OnMoviesChanged;
             base.OnFormClosed(e);
+        }
+
+        private void Card_OnDetailsClick(object sender, Movie movie)
+        {
+            if (movie == null) return;
+
+            using var dlg = new MovieSytemManageMent.ApplicationForm.Dialog.MovieDetailDialog(movie);
+            dlg.ShowDialog(this);
+        }
+
+        private void Card_OnBookClick(object sender, Movie movie)
+        {
+            if (movie == null) return;
+
+            using var dlg = new AddBookingDialog(movie.Id);
+            var dr = dlg.ShowDialog(this);
+            if (dr == DialogResult.OK && dlg.NewBooking != null)
+            {
+                // Persist booking if you have a repository, otherwise show confirmation
+                // Example (uncomment and adapt if you have BookingRepository):
+                // new BookingRepository().Add(dlg.NewBooking);
+                // new BookingRepository().Add(dlg.NewBooking);
+
+                MessageBox.Show($"Booking created for \"{movie.Title}\" ({dlg.NewBooking.CustomerName}).",
+                    "Booking Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // refresh UI/stats if needed
+                LoadStats();
+            }
         }
     }
 }
