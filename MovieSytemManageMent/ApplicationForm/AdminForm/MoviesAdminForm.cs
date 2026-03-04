@@ -206,18 +206,16 @@ namespace MovieSytemManageMent.ApplicationForm.AdminForm
             foreach (var b in _currentBookings)
             {
                 dgvBookings.Rows.Add(
-                    b.Id,
-                    b.CustomerName,
-                    b.SeatNumber,
-                    b.BookingDate.ToString("dd MMM yyyy"),
-                    $"${b.TicketPrice:0.00}",
-                    b.Status
+                    b.Id,             // colId
+                    b.CustomerName,   // colCustomer
+                    b.SeatNumber,     // colSeat
+                    b.BookingDate.ToString("dd MMM yyyy"), // colDate
+                    $"${b.TicketPrice:0.00}", // colPrice
+                    b.Status          // colStatus
                 );
             }
-
             UpdateBookingStats(_currentBookings);
         }
-
         // ════════════════════════════════════════════════════════════════
         //  UPDATE MINI STAT CARDS
         // ════════════════════════════════════════════════════════════════

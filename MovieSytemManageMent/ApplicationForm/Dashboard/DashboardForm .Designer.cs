@@ -124,10 +124,7 @@
             }
 
             StyleNav(btnNavDashboard, "⬛ Dashboard", 164, true);
-            StyleNav(btnNavMovies, "🎬 Movies", 212);
-            StyleNav(btnNavGenres, "🏷 Genres", 260);
-            StyleNav(btnNavActors, "👤 Actors", 308);
-            StyleNav(btnNavReports, "📊 Reports", 356);
+            StyleNav(btnNavMovies, "🎬 Admin Movie", 212);
             StyleNav(btnNavLogout, "🚪 Logout", 452);
 
             // ── TOP BAR ──────────────────────────────────────────────────

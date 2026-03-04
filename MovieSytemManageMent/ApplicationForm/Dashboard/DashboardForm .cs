@@ -8,6 +8,7 @@ using MovieSytemManageMent.Controls;
 using MovieSytemManageMent.Data;
 using MovieSytemManageMent.Model;
 using MovieSytemManageMent.Repositories;
+using MovieSytemManageMent.Repositories.BookingRepository;
 using MovieSytemManageMent.Strategies;
 using System;
 using System.Collections.Generic;
@@ -381,15 +382,12 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
             var dr = dlg.ShowDialog(this);
             if (dr == DialogResult.OK && dlg.NewBooking != null)
             {
-                // Persist booking if you have a repository, otherwise show confirmation
-                // Example (uncomment and adapt if you have BookingRepository):
-                // new BookingRepository().Add(dlg.NewBooking);
-                // new BookingRepository().Add(dlg.NewBooking);
+                // ✅ Use singleton so MoviesAdminForm sees the same data
+                BookingRepository.Instance.Add(dlg.NewBooking);
 
                 MessageBox.Show($"Booking created for \"{movie.Title}\" ({dlg.NewBooking.CustomerName}).",
                     "Booking Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // refresh UI/stats if needed
                 LoadStats();
             }
         }
