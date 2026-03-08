@@ -62,6 +62,15 @@ namespace MovieSytemManageMent.Controls
             pbPoster.Image = LoadPosterImage(pbPoster.Width, pbPoster.Height);
             pbPoster.Click += (s, e) => OnDetailsClick?.Invoke(this, Movie);
 
+            // Inside BuildUI()
+            pbPoster.Paint += (s, e) => {
+                // This clips the image to have rounded corners matching your card
+                using (GraphicsPath path = GetRoundedRect(new Rectangle(0, 0, pbPoster.Width, pbPoster.Height), 12f))
+                {
+                    pbPoster.Region = new Region(path);
+                }
+            };
+
             // 2. Title
             var lblTitle = new Label
             {
@@ -159,14 +168,46 @@ namespace MovieSytemManageMent.Controls
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(Movie.PosterUrl) && File.Exists(Movie.PosterUrl))
+                if (!string.IsNullOrWhiteSpace(Movie.PosterUrl))
                 {
-                    using (var img = Image.FromFile(Movie.PosterUrl))
-                        return new Bitmap(img, new Size(w, h));
+                    // Check if it's a web URL
+                    if (Movie.PosterUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return DownloadImage(Movie.PosterUrl, w, h);
+                    }
+                    // Check if it's a local file
+                    else if (File.Exists(Movie.PosterUrl))
+                    {
+                        using (var img = Image.FromFile(Movie.PosterUrl))
+                            return new Bitmap(img, new Size(w, h));
+                    }
                 }
             }
-            catch { }
+            catch { /* Log error if needed */ }
+
             return GenerateModernPlaceholder(w, h);
+        }
+
+        private Image DownloadImage(string url, int w, int h)
+        {
+            try
+            {
+                using (System.Net.WebClient wc = new System.Net.WebClient())
+                {
+                    byte[] bytes = wc.DownloadData(url);
+                    using (var ms = new MemoryStream(bytes))
+                    {
+                        using (var img = Image.FromStream(ms))
+                        {
+                            return new Bitmap(img, new Size(w, h));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return GenerateModernPlaceholder(w, h);
+            }
         }
 
         private Image GenerateModernPlaceholder(int w, int h)

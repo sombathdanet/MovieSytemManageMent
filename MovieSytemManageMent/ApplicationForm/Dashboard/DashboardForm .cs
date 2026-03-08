@@ -32,6 +32,8 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
         // ── Store original dashboard controls so we can restore them ──────
         private List<Control> _dashboardControls;
 
+        private bool _isPerformingManualUpdate = false;
+
         // ── Constructor ───────────────────────────────────────────────────
         public DashboardForm()
         {
@@ -207,6 +209,10 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
         // ════════════════════════════════════════════════════════════════
         private void OnMoviesChanged(object sender, EventArgs e)
         {
+            // If we just added the movie ourselves, don't clear the whole screen!
+            if (_isPerformingManualUpdate) return;
+
+            // Otherwise (e.g., deleted from Admin form), reload everything
             LoadStats();
             LoadMovieCards(ApplySort(_movieRepo.GetAll()));
         }
@@ -327,8 +333,51 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
         // ════════════════════════════════════════════════════════════════
         private void btnAddMovie_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Open Add Movie Form here.", "Add Movie",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var dlg = new MovieSytemManageMent.ApplicationForm.Dialog.AddMovieDialog())
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.NewMovie != null)
+                {
+                    _isPerformingManualUpdate = true; // Block the observer from reloading everything
+                    try
+                    {
+                        _movieRepo.Add(dlg.NewMovie); // This triggers MoviesChanged
+                        AppendMovieCard(dlg.NewMovie);
+                        LoadStats();
+                    }
+                    finally
+                    {
+                        _isPerformingManualUpdate = false;
+                    }
+                }
+            }
+        }
+
+        private void AppendMovieCard(Movie movie)
+        {
+            // Remove "no movies" empty label if showing
+            var emptyLbl = flpMovieCards.Controls
+                .OfType<Label>()
+                .FirstOrDefault(l => l.Text.Contains("No movies"));
+            if (emptyLbl != null)
+                flpMovieCards.Controls.Remove(emptyLbl);
+
+            // Build card offscreen first
+            var card = new MovieCardControl(movie);
+            card.OnDetailsClick += Card_OnDetailsClick;
+            card.OnBookClick += Card_OnBookClick;
+
+            // Suspend layout — add — resume: no repaint until done
+            flpMovieCards.SuspendLayout();
+            flpMovieCards.Controls.Add(card);
+            flpMovieCards.ResumeLayout(false);
+            flpMovieCards.PerformLayout();
+
+            // Update count label
+            int count = flpMovieCards.Controls.OfType<MovieCardControl>().Count();
+            lblMovieCount.Text = $"{count} movie{(count != 1 ? "s" : "")}";
+
+            // Smooth scroll to new card without jumping
+            flpMovieCards.ScrollControlIntoView(card);
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -378,11 +427,12 @@ namespace MovieSytemManageMent.ApplicationForm.Dashboard
         {
             if (movie == null) return;
 
-            using var dlg = new AddBookingDialog(movie.Id);
+            // ✅ FIX: Pass BOTH the ID and the MOVIE object
+            using var dlg = new AddBookingDialog(movie.Id, movie);
+
             var dr = dlg.ShowDialog(this);
             if (dr == DialogResult.OK && dlg.NewBooking != null)
             {
-                // ✅ Use singleton so MoviesAdminForm sees the same data
                 BookingRepository.Instance.Add(dlg.NewBooking);
 
                 MessageBox.Show($"Booking created for \"{movie.Title}\" ({dlg.NewBooking.CustomerName}).",
